@@ -1,0 +1,28 @@
+services:
+  db:
+    image: mysql:8
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: quizgame
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+    ports:
+      - "3300:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/public/uploads
+volumes:
+  dbdata:
+  uploads:
