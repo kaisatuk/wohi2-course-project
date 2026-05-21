@@ -5,7 +5,12 @@ const authenticate = require("../middleware/auth");
 const isOwner = require("../middleware/isOwner");
 const multer = require("multer");
 const path = require("path");
-const { ValidationError, NotFoundError } = require("../lib/errors"); // 👈 lisätty
+const { ValidationError, NotFoundError } = require("../lib/errors"); 
+const { z } = require("zod");
+const QuestionInput = z.object({
+  question: z.string().min(1),
+  answer: z.string().min(1),
+});
 
 // Multer setup
 const storage = multer.diskStorage({
@@ -20,7 +25,7 @@ const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith("image/")) cb(null, true);
-    else cb(new ValidationError("Only image files are allowed")); // 👈 muutettu
+    else cb(new ValidationError("Only image files are allowed")); 
   },
   limits: { fileSize: 5 * 1024 * 1024 },
 });
@@ -67,7 +72,7 @@ router.get("/:qId", async (req, res) => {
       attempts: { where: { userId: req.user.userId, correct: true }, take: 1 },
     },
   });
-  if (!question) throw new NotFoundError("Question not found"); // 👈 muutettu
+  if (!question) throw new NotFoundError("Question not found"); 
   res.json({
     ...question,
     userName: question.user?.name || null,
@@ -79,11 +84,10 @@ router.get("/:qId", async (req, res) => {
 
 // POST /api/questions
 router.post("/", upload.single("image"), async (req, res) => {
-  const { question, answer } = req.body;
-  if (!question || !answer) throw new ValidationError("question and answer are required"); // 👈 muutettu
+  const data = QuestionInput.parse(req.body);
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
   const newQuestion = await prisma.question.create({
-    data: { question, answer, userId: req.user.userId, imageUrl },
+    data: { question: data.question, answer: data.answer, userId: req.user.userId, imageUrl },
   });
   res.json(newQuestion);
 });
@@ -111,10 +115,10 @@ router.post("/:qId/play", async (req, res) => {
   const questionId = Number(req.params.qId);
   const { answer } = req.body;
 
-  if (!answer) throw new ValidationError("Answer is required"); // 👈 muutettu
+  if (!answer) throw new ValidationError("Answer is required"); 
 
   const question = await prisma.question.findUnique({ where: { id: questionId } });
-  if (!question) throw new NotFoundError("Question not found"); // 👈 muutettu
+  if (!question) throw new NotFoundError("Question not found"); 
 
   const correct = question.answer.toLowerCase().trim() === answer.toLowerCase().trim();
   const attempt = await prisma.attempt.create({
