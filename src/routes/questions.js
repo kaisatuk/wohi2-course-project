@@ -10,7 +10,9 @@ const { z } = require("zod");
 const QuestionInput = z.object({
   question: z.string().min(1),
   answer: z.string().min(1),
+  difficulty: z.enum(["easy", "medium", "hard"]).default("medium"),
 });
+
 
 // Multer setup
 const storage = multer.diskStorage({
@@ -50,9 +52,11 @@ router.get("/", async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 5));
   const skip = (page - 1) * limit;
+  const difficulty = req.query.difficulty;
 
   const [questions, total] = await Promise.all([
     prisma.question.findMany({
+      where: difficulty ? { difficulty } : {},
       orderBy: { id: "asc" },
       include: {
         user: true,
@@ -61,7 +65,7 @@ router.get("/", async (req, res) => {
       skip,
       take: limit,
     }),
-    prisma.question.count(),
+    prisma.question.count({ where: difficulty ? { difficulty } : {} }),
   ]);
 
   const formatted = questions.map((q) => ({
@@ -98,10 +102,10 @@ router.get("/:qId", async (req, res) => {
 // POST /api/questions
 router.post("/", upload.single("image"), async (req, res) => {
   const data = QuestionInput.parse(req.body);
-  const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
-  const newQuestion = await prisma.question.create({
-    data: { question: data.question, answer: data.answer, userId: req.user.userId, imageUrl },
-  });
+const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+const newQuestion = await prisma.question.create({
+  data: { question: data.question, answer: data.answer, difficulty: data.difficulty, userId: req.user.userId, imageUrl },
+});
   res.json(newQuestion);
 });
 
