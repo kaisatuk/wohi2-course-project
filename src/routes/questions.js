@@ -32,6 +32,19 @@ const upload = multer({
 
 router.use(authenticate);
 
+// GET /api/questions/quiz
+router.get("/quiz", async (req, res) => {
+  const total = await prisma.question.count();
+  const take = Math.min(10, total);
+  const skip = Math.max(0, Math.floor(Math.random() * (total - take)));
+  const questions = await prisma.question.findMany({
+    skip,
+    take,
+    orderBy: { id: "asc" },
+    select: { id: true, question: true, imageUrl: true },
+  });
+  res.json({ data: questions, count: questions.length });
+});
 // GET /api/questions
 router.get("/", async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1);
